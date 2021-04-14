@@ -26,7 +26,7 @@ n := 2
 l := 3
 w_min := 3
 w_max := 5
-rs, err := NewRandStrobes(seq, n, l, w_min, w_max)
+rs, err := strobemers.NewRandStrobes(seq, n, l, w_min, w_max)
 checkError(err)
 
 var hash uint64

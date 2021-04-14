@@ -171,7 +171,7 @@ func (rs *RandStrobes) nextOrder2() (uint64, bool) {
 	// fmt.Printf("i:%d, window (%d-%d)\n", rs.idx, rs.wStart, rs.wEnd)
 
 	rs.hash1 = rs.hashes[rs.idx]
-	rs.hash2 = rs.prime // initializate with a big number
+	rs.hash2 = rs.prime + 356 // initializate with a big number
 	for rs.i = rs.wStart; rs.i <= rs.wEnd; rs.i++ {
 		rs.hash = (rs.hash1 + rs.hashes[rs.i]) & rs.prime
 		if rs.hash < rs.hash2 {
@@ -210,7 +210,7 @@ func (rs *RandStrobes) nextOrder3() (uint64, bool) {
 	// fmt.Printf("i:%d, window2 (%d-%d)\n", rs.idx, rs.w2Start, rs.w2End)
 
 	rs.hash1 = rs.hashes[rs.idx]
-	rs.hash2 = rs.prime
+	rs.hash2 = rs.prime + 356
 	for rs.i = rs.wStart; rs.i <= rs.wEnd; rs.i++ {
 		rs.hash = (rs.hash1 + rs.hashes[rs.i]) & rs.prime
 		if rs.hash < rs.hash2 {
@@ -220,7 +220,7 @@ func (rs *RandStrobes) nextOrder3() (uint64, bool) {
 	}
 	rs.hash2 = rs.hash1 - rs.hashes[rs.idx2]
 
-	rs.hash3 = rs.prime
+	rs.hash3 = rs.prime + 356
 	for rs.i = rs.w2Start; rs.i <= rs.w2End; rs.i++ {
 		rs.hash = (rs.hash2 + rs.hashes[rs.i]) & rs.prime
 		if rs.hash < rs.hash3 {
