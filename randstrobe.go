@@ -8,7 +8,12 @@ import (
 	"github.com/will-rowe/nthash"
 )
 
-var Prime uint64 = 997
+// PrimeNumber is the primer number in minimizing h(m)+h(mj) mod q.
+var PrimeNumber uint64 = 997
+
+// ShrinkWindow is a global variable to decide whether shrink the
+// last searching window for positions near the end of sequence.
+var ShrinkWindow bool = false
 
 // RandStrobes is a iterator for randstrobes
 type RandStrobes struct {
@@ -18,7 +23,6 @@ type RandStrobes struct {
 	l    int // strobes length
 	wMin int // minimum window offset
 	wMax int // maximum window offset
-	k    int // k = N * L
 
 	idx, idx2, idx3     int    // indexes of m1, m2, m3
 	hash1, hash2, hash3 uint64 // hash value of m1, m2, m3
@@ -26,8 +30,8 @@ type RandStrobes struct {
 	hasher *nthash.NTHi // nthash
 	hashes []uint64     // precomputed ntHash values of l-mers
 
-	endHash int
-	endIdx  int
+	endHash int // position of the last l-mer
+	endIdx  int // position of the last m1
 
 	wStart, wEnd, w2Start, w2End int // window start and end
 
@@ -72,9 +76,8 @@ func NewRandStrobes(seq *[]byte, n int, l int, wMin int, wMax int) (*RandStrobes
 		wMin: wMin,
 		wMax: wMax,
 
-		endHash: len(*seq) - l,
-		endIdx:  len(*seq) - l - (n-1)*l,
-		k:       n * l,
+		endHash: len(*seq) - l,           // position of the last l-mer
+		endIdx:  len(*seq) - l - (n-1)*l, // position of the last m1
 	}
 
 	rs.computeHashes()
@@ -129,34 +132,27 @@ func (rs *RandStrobes) Next() (uint64, bool) {
 }
 
 func (rs *RandStrobes) nextOrder2() (uint64, bool) {
-	// fmt.Println()
-	// fmt.Printf("i: %d, endIdx: %d, endHash: %d\n", rs.idx, rs.endIdx, rs.endHash)
 	if rs.idx > rs.endIdx {
 		return 0, false
 	}
 
-	// window region
-	if rs.idx+rs.wMax <= rs.endHash { // middle of sequence
-		// fmt.Println("m1 is in middle of sequence")
-		rs.wStart = rs.idx + rs.wMin
-		rs.wEnd = rs.idx + rs.wMax
-	} else { // near the end of sequence
-		// fmt.Println("m1 is near the end of sequence")
-		rs.wStart = rs.endHash - (rs.wMax - rs.wMin) // move the window to left
-		if rs.wStart <= rs.idx {
-			rs.wStart = rs.idx + 1 // make sure wMin > 0
+	rs.wStart = rs.idx + rs.wMin
+	rs.wEnd = rs.idx + rs.wMax
+
+	// for positions near the end of the sequence, shrink the window size from the right
+	if rs.wEnd > rs.endHash {
+		if ShrinkWindow {
+			return 0, false
 		}
-		rs.wEnd = rs.idx + rs.wMax
-		if rs.wEnd > rs.endHash {
-			rs.wEnd = rs.endHash
-		}
+		rs.wEnd = rs.endHash
 	}
+
 	// fmt.Printf("i:%d, window (%d-%d)\n", rs.idx, rs.wStart, rs.wEnd)
 
 	rs.hash1 = rs.hashes[rs.idx]
-	rs.hash2 = Prime // initializate with a big number
+	rs.hash2 = PrimeNumber // initializate with a big number
 	for rs.i = rs.wStart; rs.i <= rs.wEnd; rs.i++ {
-		rs.hash = (rs.hash1 - rs.hashes[rs.i]) % Prime
+		rs.hash = (rs.hash1 + rs.hashes[rs.i]) % PrimeNumber
 		if rs.hash < rs.hash2 {
 			rs.idx2 = rs.i
 			rs.hash2 = rs.hash
@@ -169,48 +165,33 @@ func (rs *RandStrobes) nextOrder2() (uint64, bool) {
 }
 
 func (rs *RandStrobes) nextOrder3() (uint64, bool) {
-	if rs.idx > rs.endIdx { // end of sequence: endHash- 2*l
+	if rs.idx > rs.endIdx {
 		return 0, false
 	}
 
-	// window region
-	if rs.idx+rs.wMax<<1 <= rs.endHash { // middle of sequence
-		rs.w2Start = rs.idx + rs.wMax + rs.wMin
-		rs.w2End = rs.idx + rs.wMax + rs.wMax
-	} else { // near the end of sequence
-		// fmt.Println("m3 is near the end of sequence")
-		rs.w2Start = rs.endHash - (rs.wMax - rs.wMin) // move the window to left
-		if rs.w2Start <= rs.idx+1 {
-			rs.w2Start = rs.idx + 2
-		}
-		rs.w2End = rs.idx + rs.wMax + rs.wMax
-		if rs.w2End > rs.endHash {
-			rs.w2End = rs.endHash
-		}
+	rs.w2Start = rs.idx + rs.wMax + rs.wMin
+	rs.w2End = rs.idx + rs.wMax<<1
+	if rs.w2Start > rs.endHash {
+		return 0, false
 	}
-	// fmt.Printf("i:%d, window2 (%d-%d)\n", rs.idx, rs.w2Start, rs.w2End)
+	// for positions near the end of the sequence, shrink the last window size from the right
+	if rs.w2End > rs.endHash {
+		if ShrinkWindow {
+			return 0, false
+		}
+		rs.w2End = rs.endHash
+	}
 
-	if rs.idx+rs.wMax <= rs.endHash { // middle of sequence
-		rs.wStart = rs.idx + rs.wMin
-		rs.wEnd = rs.idx + rs.wMax
-	} else {
-		// fmt.Println("m2 is near the end of sequence")
-		rs.wStart = rs.endHash - rs.l - (rs.wMax-rs.wMin)<<1 // move the window to left
-		if rs.wStart <= rs.idx {
-			rs.wStart = rs.idx + 1
-		}
-		rs.wEnd = rs.idx + rs.wMax
-		if rs.wEnd > rs.endHash {
-			rs.wEnd = rs.endHash
-		}
-	}
+	rs.wStart = rs.idx + rs.wMin
+	rs.wEnd = rs.idx + rs.wMax
 
 	// fmt.Printf("i:%d, window (%d-%d)\n", rs.idx, rs.wStart, rs.wEnd)
+	// fmt.Printf("i:%d, window2 (%d-%d)\n", rs.idx, rs.w2Start, rs.w2End)
 
 	rs.hash1 = rs.hashes[rs.idx]
-	rs.hash2 = Prime
+	rs.hash2 = PrimeNumber
 	for rs.i = rs.wStart; rs.i <= rs.wEnd; rs.i++ {
-		rs.hash = (rs.hash1 + rs.hashes[rs.i]) % Prime
+		rs.hash = (rs.hash1 + rs.hashes[rs.i]) % PrimeNumber
 		if rs.hash < rs.hash2 {
 			rs.idx2 = rs.i
 			rs.hash2 = rs.hash
@@ -218,9 +199,9 @@ func (rs *RandStrobes) nextOrder3() (uint64, bool) {
 	}
 	rs.hash2 = rs.hash1 - rs.hashes[rs.idx2]
 
-	rs.hash3 = Prime
+	rs.hash3 = PrimeNumber
 	for rs.i = rs.w2Start; rs.i <= rs.w2End; rs.i++ {
-		rs.hash = (rs.hash2 + rs.hashes[rs.i]) % Prime
+		rs.hash = (rs.hash2 + rs.hashes[rs.i]) % PrimeNumber
 		if rs.hash < rs.hash3 {
 			rs.idx3 = rs.i
 			rs.hash3 = rs.hash

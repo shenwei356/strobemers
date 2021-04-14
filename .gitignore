@@ -22,3 +22,5 @@ doc/site/*
 *cpu.pprof
 *mem.pprof
 *trace.out
+
+t_*
