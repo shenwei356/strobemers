@@ -8,12 +8,9 @@ import (
 	"github.com/will-rowe/nthash"
 )
 
-// PrimeNumber is the primer number in minimizing h(m)+h(mj) mod q.
-var PrimeNumber uint64 = 997
-
-// ShrinkWindow is a global variable to decide whether shrink the
-// last searching window for positions near the end of sequence.
-var ShrinkWindow bool = false
+// defaultPrimeNumber is the prime number in minimizing h(m)+h(mj) mod q.
+// In this package, we use (h(m)+h(mj)) & q, where q = roundup(q) - 1
+var defaultPrimeNumber uint64 = (1 << 20) - 1
 
 // RandStrobes is a iterator for randstrobes
 type RandStrobes struct {
@@ -35,6 +32,11 @@ type RandStrobes struct {
 
 	wStart, wEnd, w2Start, w2End int // window start and end
 
+	prime uint64
+
+	// shrink the last searching window for positions near the end of sequence.
+	shrinkWindow bool
+
 	// tmp variable
 	i    int
 	hash uint64
@@ -45,10 +47,10 @@ var ErrOrderNotSupported = fmt.Errorf("strobemers: strobemer order not supported
 
 // NewRandStrobes creates a RandStrobes iterator.
 // Parameters:
-//   n    - strobemer order
-//   l    - strobes length
-//   wMin - minimum window offset, wMin > 0
-//   wMax - maximum window offset, wMin <= wMax.
+//     n    - strobemer order
+//     l    - strobes length
+//     wMin - minimum window offset, wMin > 0
+//     wMax - maximum window offset, wMin <= wMax.
 func NewRandStrobes(seq *[]byte, n int, l int, wMin int, wMax int) (*RandStrobes, error) {
 	if seq == nil || len(*seq) == 0 {
 		return nil, fmt.Errorf("strobemers: invalid DNA sequence")
@@ -78,11 +80,25 @@ func NewRandStrobes(seq *[]byte, n int, l int, wMin int, wMax int) (*RandStrobes
 
 		endHash: len(*seq) - l,           // position of the last l-mer
 		endIdx:  len(*seq) - l - (n-1)*l, // position of the last m1
+
+		shrinkWindow: true,
+
+		prime: defaultPrimeNumber,
 	}
 
-	rs.computeHashes()
+	return rs, rs.computeHashes()
+}
 
-	return rs, nil
+// SetPrime sets the prime number (q) in minimizing h(m)+h(mj) mod q.
+// In this package, we use (h(m)+h(mj)) & q, where q = roundup(q) - 1
+func (rs *RandStrobes) SetPrime(p uint64) {
+	rs.prime = roundup64(p) - 1
+}
+
+// SetWindowShrink decides whether shrink the search window at positions
+// near the end of the sequence. Default is true.
+func (rs *RandStrobes) SetWindowShrink(shrink bool) {
+	rs.shrinkWindow = shrink
 }
 
 func (rs *RandStrobes) computeHashes() error {
@@ -106,16 +122,21 @@ func (rs *RandStrobes) computeHashes() error {
 	}
 
 	if i != len(*rs.seq)-rs.l+1 {
-		return fmt.Errorf("strobemers: something wrong?")
+		return fmt.Errorf("strobemers: incomplete hash values")
 	}
 
 	rs.hashes = hashes
 	return nil
 }
 
-// Index returns current indexes (0-based) of strobes
-func (rs *RandStrobes) Index() (int, int, int) {
-	return rs.idx - 1, rs.idx2, rs.idx3
+// Index returns the current index (0-based) of strobemers
+func (rs *RandStrobes) Index() int {
+	return rs.idx - 1
+}
+
+// Indexes returns current indexes (0-based) of strobes
+func (rs *RandStrobes) Indexes() []int {
+	return []int{rs.idx - 1, rs.idx2, rs.idx3}
 }
 
 // Next returns the next hash value of randstrobe
@@ -141,7 +162,7 @@ func (rs *RandStrobes) nextOrder2() (uint64, bool) {
 
 	// for positions near the end of the sequence, shrink the window size from the right
 	if rs.wEnd > rs.endHash {
-		if ShrinkWindow {
+		if !rs.shrinkWindow {
 			return 0, false
 		}
 		rs.wEnd = rs.endHash
@@ -150,9 +171,9 @@ func (rs *RandStrobes) nextOrder2() (uint64, bool) {
 	// fmt.Printf("i:%d, window (%d-%d)\n", rs.idx, rs.wStart, rs.wEnd)
 
 	rs.hash1 = rs.hashes[rs.idx]
-	rs.hash2 = PrimeNumber // initializate with a big number
+	rs.hash2 = rs.prime // initializate with a big number
 	for rs.i = rs.wStart; rs.i <= rs.wEnd; rs.i++ {
-		rs.hash = (rs.hash1 + rs.hashes[rs.i]) % PrimeNumber
+		rs.hash = (rs.hash1 + rs.hashes[rs.i]) & rs.prime
 		if rs.hash < rs.hash2 {
 			rs.idx2 = rs.i
 			rs.hash2 = rs.hash
@@ -176,7 +197,7 @@ func (rs *RandStrobes) nextOrder3() (uint64, bool) {
 	}
 	// for positions near the end of the sequence, shrink the last window size from the right
 	if rs.w2End > rs.endHash {
-		if ShrinkWindow {
+		if !rs.shrinkWindow {
 			return 0, false
 		}
 		rs.w2End = rs.endHash
@@ -189,9 +210,9 @@ func (rs *RandStrobes) nextOrder3() (uint64, bool) {
 	// fmt.Printf("i:%d, window2 (%d-%d)\n", rs.idx, rs.w2Start, rs.w2End)
 
 	rs.hash1 = rs.hashes[rs.idx]
-	rs.hash2 = PrimeNumber
+	rs.hash2 = rs.prime
 	for rs.i = rs.wStart; rs.i <= rs.wEnd; rs.i++ {
-		rs.hash = (rs.hash1 + rs.hashes[rs.i]) % PrimeNumber
+		rs.hash = (rs.hash1 + rs.hashes[rs.i]) & rs.prime
 		if rs.hash < rs.hash2 {
 			rs.idx2 = rs.i
 			rs.hash2 = rs.hash
@@ -199,9 +220,9 @@ func (rs *RandStrobes) nextOrder3() (uint64, bool) {
 	}
 	rs.hash2 = rs.hash1 - rs.hashes[rs.idx2]
 
-	rs.hash3 = PrimeNumber
+	rs.hash3 = rs.prime
 	for rs.i = rs.w2Start; rs.i <= rs.w2End; rs.i++ {
-		rs.hash = (rs.hash2 + rs.hashes[rs.i]) % PrimeNumber
+		rs.hash = (rs.hash2 + rs.hashes[rs.i]) & rs.prime
 		if rs.hash < rs.hash3 {
 			rs.idx3 = rs.i
 			rs.hash3 = rs.hash
