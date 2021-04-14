@@ -1,6 +1,6 @@
 # Strobemers in Go
 
-[![GoDoc](https://godoc.org/github.com/shenwei356/strobemers?status.svg)](https://godoc.org/github.com/shenwei356/strobemers).
+[![GoDoc](https://godoc.org/github.com/shenwei356/strobemers?status.svg)](https://godoc.org/github.com/shenwei356/strobemers)
 [![Go Report Card](https://goreportcard.com/badge/github.com/shenwei356/strobemers)](https://goreportcard.com/report/github.com/shenwei356/strobemers)
 
 ## Introduction
@@ -8,8 +8,8 @@
 This is a Go implementation of the [strobemers](https://github.com/ksahlin/strobemers) (only RandStrobes),
 with some [differences](#differences).
 
-The implementation of `Randstrobes` has a not-bad performance (2~3X slower) compared to regular k-mer,
-while it's 10~20X slower than [ntHash](https://github.com/will-rowe/nthash/). 
+The implementation of `Randstrobes` has a not-bad performance (2-3X slower) compared to regular k-mer,
+while it's 10-20X slower than [ntHash](https://github.com/will-rowe/nthash/). 
 see [benchmark](#benchmark).
 
 
