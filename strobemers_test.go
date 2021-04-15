@@ -3,15 +3,15 @@
 package strobemers
 
 import (
-	"fmt"
 	"math/rand"
-	"strings"
 	"testing"
 
 	"github.com/shenwei356/util/bytesize"
 	"github.com/will-rowe/nthash"
 	"github.com/zeebo/xxh3"
 )
+
+var debug = true
 
 var seqs [][]byte
 
@@ -37,8 +37,8 @@ var _n2 int = 2
 var _l2 int = 15
 var _n3 int = 3
 var _l3 int = 10
-var _w_min int = 15
-var _w_max int = 25
+var _w_min int = 20
+var _w_max int = 30
 
 func BenchmarkNTHash(b *testing.B) {
 	for i := range seqs {
@@ -108,6 +108,62 @@ func BenchmarkKmers(b *testing.B) {
 	}
 }
 
+func BenchmarkMinStrobesOrder2(b *testing.B) {
+	for i := range seqs {
+		size := len(seqs[i])
+		b.Run(bytesize.ByteSize(size).String(), func(b *testing.B) {
+			for j := 0; j < b.N; j++ {
+				var hash uint64
+				var ok bool
+				var rs *MinStrobes
+				var err error
+
+				rs, err = NewMinStrobes(&seqs[i], _n2, _l2, _w_min, _w_max)
+				if err != nil {
+					b.Errorf("fail to create MinStrobes. seq length: %d", size)
+				}
+
+				for {
+					hash, ok = rs.Next()
+					if !ok {
+						break
+					}
+
+					_hash = hash
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkMinStrobesOrder3(b *testing.B) {
+	for i := range seqs {
+		size := len(seqs[i])
+		b.Run(bytesize.ByteSize(size).String(), func(b *testing.B) {
+			for j := 0; j < b.N; j++ {
+				var hash uint64
+				var ok bool
+				var rs *MinStrobes
+				var err error
+
+				rs, err = NewMinStrobes(&seqs[i], _n3, _l3, _w_min, _w_max)
+				if err != nil {
+					b.Errorf("fail to create MinStrobes. seq length: %d", size)
+				}
+
+				for {
+					hash, ok = rs.Next()
+					if !ok {
+						break
+					}
+
+					_hash = hash
+				}
+			}
+		})
+	}
+}
+
 func BenchmarkRandStrobesOrder2(b *testing.B) {
 	for i := range seqs {
 		size := len(seqs[i])
@@ -161,82 +217,5 @@ func BenchmarkRandStrobesOrder3(b *testing.B) {
 				}
 			}
 		})
-	}
-}
-
-var debug = false
-
-func TestRandStrobeOrder2(t *testing.T) {
-	_s := "ACGATCTGGTACCTAG"
-	s := []byte(_s)
-
-	n := 2
-	l := 3
-	wMin := 3
-	wMax := 5
-	rs, err := NewRandStrobes(&s, n, l, wMin, wMax)
-	if err != nil {
-		t.Error(err)
-	}
-
-	var h uint64
-	var ok bool
-	var ps []int
-	var i1, i2 int
-	for {
-		h, ok = rs.Next()
-		if !ok {
-			break
-		}
-
-		if !debug {
-			continue
-		}
-
-		ps = rs.Indexes()
-		i1, i2 = ps[0], ps[1]
-		fmt.Printf("%s len:%d\n", _s, len(_s))
-		fmt.Printf("%s%s i1:%d\n", strings.Repeat(" ", i1), _s[i1:i1+l], i1)
-		fmt.Printf("%s%s i2:%d\n", strings.Repeat(" ", i2), _s[i2:i2+l], i2)
-		fmt.Printf("%s%d\n", strings.Repeat(" ", len(_s)+1), h)
-		fmt.Println()
-	}
-}
-
-func TestRandStrobeOrder3(t *testing.T) {
-	_s := "ACGATCTGGTACCTAG"
-	s := []byte(_s)
-
-	n := 3
-	l := 3
-	wMin := 3
-	wMax := 5
-	rs, err := NewRandStrobes(&s, n, l, wMin, wMax)
-	if err != nil {
-		t.Error(err)
-	}
-
-	var h uint64
-	var ok bool
-	var ps []int
-	var i1, i2, i3 int
-	for {
-		h, ok = rs.Next()
-		if !ok {
-			break
-		}
-
-		if !debug {
-			continue
-		}
-
-		ps = rs.Indexes()
-		i1, i2, i3 = ps[0], ps[1], ps[2]
-		fmt.Printf("%s len:%d\n", _s, len(_s))
-		fmt.Printf("%s%s i1:%d\n", strings.Repeat(" ", i1), _s[i1:i1+l], i1)
-		fmt.Printf("%s%s i2:%d\n", strings.Repeat(" ", i2), _s[i2:i2+l], i2)
-		fmt.Printf("%s%s i2:%d\n", strings.Repeat(" ", i3), _s[i3:i3+l], i3)
-		fmt.Printf("%s%d\n", strings.Repeat(" ", len(_s)+1), h)
-		fmt.Println()
 	}
 }
