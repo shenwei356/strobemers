@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/shenwei356/bio/seqio/fastx"
-	"github.com/shenwei356/nthash"
+	"github.com/will-rowe/nthash"
 	"github.com/shenwei356/strobemers"
 )
 
