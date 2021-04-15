@@ -5,16 +5,16 @@
 
 ## Introduction
 
-This is a Go implementation of the [strobemers](https://github.com/ksahlin/strobemers) (MinStrobes and RandStrobes),
+This is a Go implementation of the [strobemers](https://github.com/ksahlin/strobemers) (minstrobes and randstrobes),
 with some [differences](#differences).
 
 The implementation of `Randstrobes` has a not-bad performance (2-3X slower) compared to regular k-mer,
 while it's 10-20X slower than [ntHash](https://github.com/will-rowe/nthash/). 
-Besides `Randstrobes` is only slightly slower than `MinStrobes` (see [benchmark](#benchmark)).
+Besides, `Randstrobes` is only slightly slower than `MinStrobes` (see [benchmark](#benchmark)).
 
-#### Attention
+### Attention
 
-Current implementation only compute strobemers of current strand,
+The current implementation only computes strobemers of the positive strand,
 because the strobes are asymmetrical and the location matters.
 
 ## Installation
@@ -53,19 +53,18 @@ for {
 
 ## Differences
 
-Differences compared to the original implementation
-
+Here are some differences compared to the original implementation,
 see discussion: [#1](https://github.com/ksahlin/strobemers/issues/1), [#2](https://github.com/ksahlin/strobemers/issues/2).
 
 item                  |orginal                |this                              |comment
-:---------------------|:----------------------|:---------------------------------|:---------------------------------------
-window range          |`w_min < w_max`        |`w_min <= w_max`                  |allowing a fixed position
+:---------------------|:----------------------|:---------------------------------|:-----------------------------------------
+window range          |`w_min < w_max`        |`w_min <= w_max`                  |allow a fixed position
 shrinking window      |all `w_min` and `w_max`|optional shrinking last `w_max`   |see figures below
 number of strobemers  |`len(seq)-n*l+1`       |`len(seq)-n*l+1-(n-1)*l`          |window shrinked
 number of strobemers  |                       |`len(seq)-n*l+1-(n-1)*(l+w_min-1)`|window not shrinked
 choice of min hash    |`(h(m)+h(mj))%q`       |`(h(m)+h(mj))&q`                  |`&` is faster than `%`
-final hash value (n=2)|h(m1)-h(m2)            |h(m1)/2+h(m2)/3                   |keep asymmetry and avoid uint64 overflow
-final hash value (n=3)|h(m1)-h(m2)+2*h(m3)    |h(m1)/3+h(m2)/4+h(m3)/5           |~
+final hash value (n=2)|`h(m1)-h(m2)`          |`h(m1)/2+h(m2)/3`                 |keep asymmetry and avoid `uint64` overflow
+final hash value (n=3)|`h(m1)-h(m2)+2*h(m3)`  |`h(m1)/3+h(m2)/4+h(m3)/5`         |~
 
 <img src="illustration_randstrobes_order2.jpg" width="750" />
 
