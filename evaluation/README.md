@@ -2,6 +2,8 @@
 
 ## Number of matched strobemers
 
+[A similar test](https://github.com/BGI-Qingdao/strobemer_cpptest#benchmark_sim-r-match-only) with approximate results.
+
 query: 150bp, snp: 1 (0.006)
 
     $ go run test1_matches.go  q0-snp1.fasta r0.fasta  | csvtk pretty -t
