@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	"github.com/shenwei356/bio/seqio/fastx"
-	"github.com/will-rowe/nthash"
 	"github.com/shenwei356/strobemers"
+	"github.com/will-rowe/nthash"
 )
 
 func main() {

@@ -183,7 +183,7 @@ func (rs *RandStrobes) nextOrder3() (uint64, bool) {
 			rs.hash2 = rs.hash
 		}
 	}
-	rs.hash2 = rs.hash1/2 + rs.hashes[rs.idx2]/3
+	rs.hash2 = rs.hash1/3 + rs.hashes[rs.idx2]/4
 
 	rs.hash3 = math.MaxUint64
 	for rs.i = rs.w2Start; rs.i <= rs.w2End; rs.i++ {
@@ -193,7 +193,7 @@ func (rs *RandStrobes) nextOrder3() (uint64, bool) {
 			rs.hash3 = rs.hash
 		}
 	}
-	rs.hash3 = rs.hash2 + rs.hashes[rs.idx3]/4
+	rs.hash3 = rs.hash2 + rs.hashes[rs.idx3]/5
 
 	rs.idx++
 	return rs.hash3, true
